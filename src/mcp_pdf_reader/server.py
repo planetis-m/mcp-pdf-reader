@@ -69,7 +69,7 @@ def read_pdf_text(
     for page_num in range(start_page - 1, end_page):
         page = doc[page_num]
         text = page.get_text().strip()
-        result += f"<page n={page_num + 1}>{text}</page>\n"
+        result += f"\n<page n={page_num + 1}>\n{text}\n</page>\n"
 
     doc.close()
     return result
@@ -112,7 +112,7 @@ def read_by_ocr(
         page = doc[page_num]
         textpage = page.get_textpage_ocr(flags=3, language=language, dpi=dpi, full=True)
         text = page.get_text(textpage=textpage).strip()
-        result += f"<page n={page_num + 1}>{text}</page>\n"
+        result += f"\n<page n={page_num + 1}>\n{text}\n</page>\n"
 
     doc.close()
     return result
