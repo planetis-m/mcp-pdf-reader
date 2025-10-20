@@ -20,20 +20,20 @@ mcp = FastMCP("PDF Reader", version="1.0.0")
 def resolve_path(file_path: str) -> Path:
     """Resolve file path, checking PDF_DIR if needed."""
     path = Path(file_path)
-    
+
     if not path.exists():
         pdf_dir = os.environ.get("PDF_DIR")
         if pdf_dir:
             alt_path = Path(pdf_dir) / file_path
             if alt_path.exists():
                 return alt_path
-        
+
         raise FileNotFoundError(
             f"File not found: {file_path}\n"
             f"Absolute path: {path.resolve()}\n"
             f"Tip: Use absolute path or set PDF_DIR environment variable"
         )
-    
+
     return path
 
 
@@ -45,32 +45,32 @@ def read_pdf_text(
 ) -> str:
     """
     Extract text from PDF file.
-    
+
     Args:
         file_path: Path to PDF file
         start_page: Start page (1-based, default: 1)
         end_page: End page (inclusive, default: last page)
-        
+
     Returns:
         Extracted text with page markers
     """
     path = resolve_path(file_path)
     doc = fitz.open(path)
-    
+
     total_pages = len(doc)
     start_page = max(1, start_page)
     end_page = min(total_pages, end_page or total_pages)
-    
+
     if start_page > end_page:
         start_page, end_page = end_page, start_page
-    
-    result = f"File: {path.name}\nTotal pages: {total_pages}\n\n"
-    
+
+    result = f"File: {path.name} | Pages: {total_pages}\n"
+
     for page_num in range(start_page - 1, end_page):
         page = doc[page_num]
         text = page.get_text().strip()
-        result += f"{'='*60}\nPage {page_num + 1}\n{'='*60}\n{text}\n\n"
-    
+        result += f"<page n={page_num + 1}>{text}</page>\n"
+
     doc.close()
     return result
 
@@ -85,35 +85,35 @@ def read_by_ocr(
 ) -> str:
     """
     Extract text from PDF using OCR.
-    
+
     Args:
         file_path: Path to PDF file
         start_page: Start page (1-based, default: 1)
         end_page: End page (inclusive, default: last page)
         language: OCR language code (eng, fra, deu, spa, chi_sim, etc.)
         dpi: Resolution (default: 300, higher = better quality but slower)
-        
+
     Returns:
         OCR extracted text with page markers
     """
     path = resolve_path(file_path)
     doc = fitz.open(path)
-    
+
     total_pages = len(doc)
     start_page = max(1, start_page)
     end_page = min(total_pages, end_page or total_pages)
-    
+
     if start_page > end_page:
         start_page, end_page = end_page, start_page
-    
-    result = f"File: {path.name}\nOCR: language={language}, dpi={dpi}\nTotal pages: {total_pages}\n\n"
-    
+
+    result = f"File: {path.name} | Pages: {total_pages}\n"
+
     for page_num in range(start_page - 1, end_page):
         page = doc[page_num]
         textpage = page.get_textpage_ocr(flags=3, language=language, dpi=dpi, full=True)
         text = page.get_text(textpage=textpage).strip()
-        result += f"{'='*60}\nPage {page_num + 1}\n{'='*60}\n{text}\n\n"
-    
+        result += f"<page n={page_num + 1}>{text}</page>\n"
+
     doc.close()
     return result
 
@@ -125,29 +125,29 @@ def read_pdf_images(
 ) -> Dict[str, Any]:
     """
     Extract images from a PDF page.
-    
+
     Args:
         file_path: Path to PDF file
         page_number: Page number (1-based, default: 1)
-        
+
     Returns:
         Dictionary with image metadata and base64-encoded image data
     """
     path = resolve_path(file_path)
     doc = fitz.open(path)
-    
+
     total_pages = len(doc)
     if page_number < 1 or page_number > total_pages:
         raise ValueError(f"Page {page_number} out of range (1-{total_pages})")
-    
+
     page = doc[page_number - 1]
     image_list = page.get_images(full=True)
-    
+
     images = []
     for idx, img in enumerate(image_list):
         xref = img[0]
         base_image = doc.extract_image(xref)
-        
+
         images.append({
             "image_id": f"p{page_number}_img{idx + 1}",
             "width": base_image["width"],
@@ -156,9 +156,9 @@ def read_pdf_images(
             "size_bytes": len(base_image["image"]),
             "base64": base64.b64encode(base_image["image"]).decode('utf-8')
         })
-    
+
     doc.close()
-    
+
     return {
         "file": path.name,
         "page": page_number,
@@ -174,7 +174,7 @@ def main():
     if pdf_dir and Path(pdf_dir).is_dir():
         os.chdir(pdf_dir)
         logger.info(f"Working directory: {pdf_dir}")
-    
+
     logger.info("Starting MCP PDF Server")
     mcp.run(transport='stdio')
 
