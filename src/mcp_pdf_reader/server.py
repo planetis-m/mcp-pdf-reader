@@ -168,7 +168,8 @@ def read_pdf_images(
     }
 
 
-if __name__ == "__main__":
+def main():
+    """Main entry point for the MCP server."""
     pdf_dir = os.environ.get("PDF_DIR")
     if pdf_dir and Path(pdf_dir).is_dir():
         os.chdir(pdf_dir)
@@ -176,4 +177,8 @@ if __name__ == "__main__":
     
     logger.info("Starting MCP PDF Server")
     mcp.run(transport='stdio')
+
+
+if __name__ == "__main__":
+    main()
 

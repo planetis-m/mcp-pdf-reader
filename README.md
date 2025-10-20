@@ -29,3 +29,25 @@ uv sync
 # Optional: Set PDF directory
 cp .env.example .env
 # Edit .env and set PDF_DIR=/path/to/your/pdfs
+```
+
+### MCP Client Configuration
+
+```json
+{
+  "mcpServers": {
+    "pdf-reader": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/planetis-m/mcp-pdf-reader.git",
+        "mcp-pdf-reader"
+      ],
+      "env": {
+        "PDF_DIR": "/path/to/your/pdfs"
+      }
+    }
+  }
+}
+```
+
