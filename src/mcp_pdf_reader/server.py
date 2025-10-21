@@ -58,11 +58,13 @@ def read_pdf_text(
     doc = fitz.open(path)
 
     total_pages = len(doc)
-    start_page = max(1, start_page)
-    end_page = min(total_pages, end_page or total_pages)
+    end_page = start_page if end_page is None else end_page
 
     if start_page > end_page:
         start_page, end_page = end_page, start_page
+
+    start_page = max(1, start_page)
+    end_page = min(total_pages, end_page)
 
     result = f"File: {path.name} | Pages: {total_pages}\n"
 
@@ -100,11 +102,13 @@ def read_by_ocr(
     doc = fitz.open(path)
 
     total_pages = len(doc)
-    start_page = max(1, start_page)
-    end_page = min(total_pages, end_page or total_pages)
+    end_page = start_page if end_page is None else end_page
 
     if start_page > end_page:
         start_page, end_page = end_page, start_page
+
+    start_page = max(1, start_page)
+    end_page = min(total_pages, end_page)
 
     result = f"File: {path.name} | Pages: {total_pages}\n"
 
