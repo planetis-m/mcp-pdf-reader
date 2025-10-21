@@ -49,7 +49,7 @@ def read_pdf_text(
     Args:
         file_path: Path to PDF file
         start_page: Start page (1-based, default: 1)
-        end_page: End page (inclusive, default: start page)
+        end_page: End page (inclusive, default: last page)
 
     Returns:
         Extracted text with page markers
