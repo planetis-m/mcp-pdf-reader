@@ -49,7 +49,7 @@ def read_pdf_text(
     Args:
         file_path: Path to PDF file
         start_page: Start page (1-based, default: 1)
-        end_page: End page (inclusive, default: last page)
+        end_page: End page (inclusive, default: start page)
 
     Returns:
         Extracted text with page markers
@@ -58,7 +58,7 @@ def read_pdf_text(
     doc = fitz.open(path)
 
     total_pages = len(doc)
-    end_page = start_page if end_page is None else end_page
+    end_page = total_pages if end_page is None else end_page
 
     if start_page > end_page:
         start_page, end_page = end_page, start_page
@@ -102,7 +102,7 @@ def read_by_ocr(
     doc = fitz.open(path)
 
     total_pages = len(doc)
-    end_page = start_page if end_page is None else end_page
+    end_page = total_pages if end_page is None else end_page
 
     if start_page > end_page:
         start_page, end_page = end_page, start_page
