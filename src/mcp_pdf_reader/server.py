@@ -114,7 +114,7 @@ def read_by_ocr(
 
     for page_num in range(start_page - 1, end_page):
         page = doc[page_num]
-        textpage = page.get_textpage_ocr(flags=3, language=language, dpi=dpi, full=True)
+        textpage = page.get_textpage_ocr(flags=16, language=language, dpi=dpi, full=True)
         text = page.get_text(textpage=textpage).strip()
         result += f"\n<page n={page_num + 1}>\n{text}\n</page>\n"
 
