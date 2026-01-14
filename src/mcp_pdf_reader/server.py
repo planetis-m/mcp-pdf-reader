@@ -2,11 +2,11 @@
 MCP PDF Server - Simple PDF text extraction, OCR, and image extraction.
 """
 
-import os
 import base64
 import logging
-from typing import Optional, Dict, Any
+import os
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 import fitz
 from fastmcp import FastMCP
@@ -49,7 +49,8 @@ def read_pdf_text(
     Args:
         file_path: Path to PDF file
         start_page: Start page (1-based, default: 1)
-        end_page: End page (inclusive, default: last page)
+        end_page: End page (inclusive, default: same as start_page for single page extraction)
+                  Use end_page=-1 to read to the last page
 
     Returns:
         Extracted text with page markers
@@ -58,7 +59,11 @@ def read_pdf_text(
     doc = fitz.open(path)
 
     total_pages = len(doc)
-    end_page = total_pages if end_page is None else end_page
+    end_page = start_page if end_page is None else end_page
+
+    # Support end_page=-1 to read to last page
+    if end_page == -1:
+        end_page = total_pages
 
     if start_page > end_page:
         start_page, end_page = end_page, start_page
@@ -91,7 +96,8 @@ def read_by_ocr(
     Args:
         file_path: Path to PDF file
         start_page: Start page (1-based, default: 1)
-        end_page: End page (inclusive, default: last page)
+        end_page: End page (inclusive, default: same as start_page for single page extraction)
+                  Use end_page=-1 to read to the last page
         language: OCR language code (eng, fra, deu, spa, chi_sim, etc.)
         dpi: Resolution (default: 300, higher = better quality but slower)
 
@@ -102,7 +108,11 @@ def read_by_ocr(
     doc = fitz.open(path)
 
     total_pages = len(doc)
-    end_page = total_pages if end_page is None else end_page
+    end_page = start_page if end_page is None else end_page
+
+    # Support end_page=-1 to read to last page
+    if end_page == -1:
+        end_page = total_pages
 
     if start_page > end_page:
         start_page, end_page = end_page, start_page
