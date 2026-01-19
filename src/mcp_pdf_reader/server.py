@@ -18,7 +18,7 @@ logger = logging.getLogger('mcp-pdf-server')
 PDF_DIR = os.environ.get("PDF_DIR", os.path.join(os.getcwd(), "pdf_resources"))
 os.makedirs(PDF_DIR, exist_ok=True)
 
-mcp = FastMCP("PDF Reader", version="1.0.0")
+mcp = FastMCP("PDF Reader")
 
 def resolve_path(file_path: str) -> Path:
     """Resolve file path, checking PDF_DIR if needed."""
