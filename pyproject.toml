@@ -8,8 +8,9 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "fastmcp>=2.12.5",
-    "pymupdf>=1.26.5",
+    "fastmcp>=2.14.3",
+    "mcp>=1.7.1",
+    "pymupdf>=1.26.7",
 ]
 
 [project.scripts]
