@@ -2,7 +2,7 @@
 MCP PDF Server - Simple PDF text extraction, OCR, and image extraction.
 """
 
-import base64
+import uuid
 import logging
 import os
 from pathlib import Path
@@ -14,28 +14,25 @@ from fastmcp import FastMCP
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('mcp-pdf-server')
 
-mcp = FastMCP("PDF Reader", version="1.0.0")
+# Setup Resource Directory
+PDF_DIR = os.environ.get("PDF_DIR", os.path.join(os.getcwd(), "pdf_resources"))
+os.makedirs(PDF_DIR, exist_ok=True)
 
+mcp = FastMCP("PDF Reader", version="1.0.0")
 
 def resolve_path(file_path: str) -> Path:
     """Resolve file path, checking PDF_DIR if needed."""
     path = Path(file_path)
-
     if not path.exists():
-        pdf_dir = os.environ.get("PDF_DIR")
-        if pdf_dir:
-            alt_path = Path(pdf_dir) / file_path
-            if alt_path.exists():
-                return alt_path
-
+        alt_path = Path(PDF_DIR) / file_path
+        if alt_path.exists():
+            return alt_path
         raise FileNotFoundError(
             f"File not found: {file_path}\n"
             f"Absolute path: {path.resolve()}\n"
             f"Tip: Use absolute path or set PDF_DIR environment variable"
         )
-
     return path
-
 
 @mcp.tool()
 def read_pdf_text(
@@ -88,7 +85,7 @@ def read_by_ocr(
     start_page: int = 1,
     end_page: Optional[int] = None,
     language: str = "eng",
-    dpi: int = 300
+    dpi: int = 200
 ) -> str:
     """
     Extract text from PDF using OCR.
@@ -99,7 +96,7 @@ def read_by_ocr(
         end_page: End page (inclusive, default: same as start_page for single page extraction)
                   Use end_page=-1 to read to the last page
         language: OCR language code (eng, fra, deu, spa, chi_sim, etc.)
-        dpi: Resolution (default: 300, higher = better quality but slower)
+        dpi: Resolution (default: 200, higher = better quality but slower)
 
     Returns:
         OCR extracted text with page markers
@@ -133,52 +130,70 @@ def read_by_ocr(
 
 
 @mcp.tool()
-def read_pdf_images(
+def screenshot_pdf_pages(
     file_path: str,
-    page_number: int = 1
+    start_page: int = 1,
+    end_page: Optional[int] = None,
+    dpi: int = 200
 ) -> Dict[str, Any]:
     """
-    Extract images from a PDF page.
+    Render PDF pages as high-quality images (screenshots).
+    Use this when the AI needs to 'see' the full layout, text, and diagrams together.
 
     Args:
         file_path: Path to PDF file
-        page_number: Page number (1-based, default: 1)
+        start_page: Start page (1-based, default: 1)
+        end_page: End page (inclusive, default: same as start_page)
+                  Use end_page=-1 to read to the last page
+        dpi: Resolution (default: 200). 
 
     Returns:
-        Dictionary with image metadata and base64-encoded image data
+        Dict containing file metadata and a list of pages with their local image paths.
     """
     path = resolve_path(file_path)
     doc = fitz.open(path)
 
     total_pages = len(doc)
-    if page_number < 1 or page_number > total_pages:
-        raise ValueError(f"Page {page_number} out of range (1-{total_pages})")
+    end_page = start_page if end_page is None else end_page
 
-    page = doc[page_number - 1]
-    image_list = page.get_images(full=True)
+    # Robust Range Checking
+    if end_page == -1:
+        end_page = total_pages
 
-    images = []
-    for idx, img in enumerate(image_list):
-        xref = img[0]
-        base_image = doc.extract_image(xref)
+    if start_page > end_page:
+        start_page, end_page = end_page, start_page
 
-        images.append({
-            "image_id": f"p{page_number}_img{idx + 1}",
-            "width": base_image["width"],
-            "height": base_image["height"],
-            "format": base_image["ext"],
-            "size_bytes": len(base_image["image"]),
-            "base64": base64.b64encode(base_image["image"]).decode('utf-8')
+    start_page = max(1, start_page)
+    end_page = min(total_pages, end_page)
+
+    pages_data = []
+
+    for page_num in range(start_page - 1, end_page):
+        page = doc[page_num]
+        
+        # Render the entire page (screenshot)
+        pix = page.get_pixmap(matrix=fitz.Matrix(dpi/72, dpi/72))
+        
+        # Generate unique filename
+        filename = f"{path.stem}_p{page_num+1}_{uuid.uuid4().hex[:6]}.png"
+        save_path = os.path.join(PDF_DIR, filename)
+        pix.save(save_path)
+
+        pages_data.append({
+            "page_number": page_num + 1,
+            "local_path": save_path,
+            "dpi": dpi,
+            "format": "png"
         })
 
     doc.close()
 
     return {
         "file": path.name,
-        "page": page_number,
         "total_pages": total_pages,
-        "image_count": len(images),
-        "images": images
+        "rendered_count": len(pages_data),
+        "pages": pages_data,
+        "note": "Full page screenshots saved. Use the local_path to read and analyze images."
     }
 
 
@@ -195,4 +210,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
