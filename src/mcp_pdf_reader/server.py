@@ -16,7 +16,6 @@ logger = logging.getLogger('mcp-pdf-server')
 
 # Setup Resource Directory
 PDF_DIR = os.environ.get("PDF_DIR", os.path.join(os.getcwd(), "pdf_resources"))
-os.makedirs(PDF_DIR, exist_ok=True)
 
 mcp = FastMCP("PDF Reader")
 
@@ -167,6 +166,7 @@ def screenshot_pdf_pages(
     end_page = min(total_pages, end_page)
 
     pages_data = []
+    os.makedirs(PDF_DIR, exist_ok=True)
 
     for page_num in range(start_page - 1, end_page):
         page = doc[page_num]
