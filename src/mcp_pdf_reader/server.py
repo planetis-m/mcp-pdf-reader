@@ -179,8 +179,9 @@ def screenshot_pdf_pages(
         img_wrapper = Image(data=img_bytes, format="png")
         
         # Reference label block
-        content_blocks.append(TextContent(type="text", text=f"<page n={page_num + 1}>\n{text}\n</page>"))
+        content_blocks.append(TextContent(type="text", text=f"<page n={page_num + 1}>"))
         content_blocks.append(img_wrapper.to_image_content(mime_type="image/png"))
+        content_blocks.append(TextContent(type="text", text=f"</page>"))
 
     doc.close()
     return content_blocks
