@@ -5,19 +5,18 @@ MCP PDF Server - Simple PDF text extraction, OCR, and image extraction.
 import uuid
 import logging
 import os
-import base64
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import fitz
 from fastmcp import FastMCP
-from mcp.types import ImageContent
+from mcp.types import ImageContent, TextContent
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('mcp-pdf-server')
 
-# Setup Resource Directory
-PDF_DIR = os.environ.get("PDF_DIR", os.path.join(os.getcwd(), "pdf_resources"))
+# Silence FastMCP logging
+logging.getLogger('fastmcp').setLevel(logging.ERROR)
 
 mcp = FastMCP("PDF Reader")
 
@@ -25,9 +24,11 @@ def resolve_path(file_path: str) -> Path:
     """Resolve file path, checking PDF_DIR if needed."""
     path = Path(file_path)
     if not path.exists():
-        alt_path = Path(PDF_DIR) / file_path
-        if alt_path.exists():
-            return alt_path
+        pdf_dir = os.environ.get("PDF_DIR")
+        if pdf_dir:
+            alt_path = Path(pdf_dir) / file_path
+            if alt_path.exists():
+                return alt_path
         raise FileNotFoundError(
             f"File not found: {file_path}\n"
             f"Absolute path: {path.resolve()}\n"
@@ -166,11 +167,6 @@ def screenshot_pdf_pages(
 
     content_blocks = []
 
-    # Metadata block
-    content_blocks.append(
-        {"type": "text", "text": f"Rendering pages {start_page} to {end_page} of {path.name}"}
-    )
-
     for page_num in range(start_page - 1, end_page):
         page = doc[page_num]
 
@@ -178,19 +174,12 @@ def screenshot_pdf_pages(
         pix = page.get_pixmap(matrix=fitz.Matrix(dpi/72, dpi/72))
         img_bytes = pix.tobytes("png")
 
-        # Create MCP ImageContent block directly
-        content_blocks.append(
-            ImageContent(
-                type="image",
-                data=base64.b64encode(img_bytes).decode("utf-8"),
-                mimeType="image/png"
-            )
-        )
-
+        # Create the FastMCP Image wrapper
+        img_wrapper = Image(data=img_bytes, format="png")
+        
         # Reference label block
-        content_blocks.append(
-            {"type": "text", "text": f"--- Page {page_num+1} ---"}
-        )
+        content_blocks.append(TextContent(type="text", text=f"<page n={page_num + 1}>\n{text}\n</page>"))
+        content_blocks.append(img_wrapper.to_image_content(mime_type="image/png"))
 
     doc.close()
     return content_blocks
