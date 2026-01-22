@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 
 import fitz
 from fastmcp import FastMCP
+from fastmcp.utilities.types import Image
 from fastmcp.utilities.logging import configure_logging, get_logger
 from mcp.types import ImageContent, TextContent
 
