@@ -6,10 +6,11 @@ import uuid
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import fitz
 from fastmcp import FastMCP
+from fastmcp import Image
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('mcp-pdf-server')
@@ -133,29 +134,26 @@ def screenshot_pdf_pages(
     file_path: str,
     start_page: int = 1,
     end_page: Optional[int] = None,
-    dpi: int = 200
-) -> Dict[str, Any]:
+    dpi: int = 100
+) -> List[Any]:
     """
-    Render PDF pages as high-quality images (screenshots).
-    Use this when the AI needs to 'see' the full layout, text, and diagrams together.
+    Render PDF pages as high-quality screenshots for multimodal analysis.
 
     Args:
         file_path: Path to PDF file
         start_page: Start page (1-based, default: 1)
-        end_page: End page (inclusive, default: same as start_page)
+        end_page: End page (inclusive, default: same as start_page for single page extraction)
                   Use end_page=-1 to read to the last page
-        dpi: Resolution (default: 200). 
-
-    Returns:
-        Dict containing file metadata and a list of pages with their local image paths.
+        dpi: Resolution (default: 100)
     """
     path = resolve_path(file_path)
-    doc = fitz.open(path)
-
+    doc = fitz.open(str(path))
     total_pages = len(doc)
-    end_page = start_page if end_page is None else end_page
 
     # Robust Range Checking
+    end_page = start_page if end_page is None else end_page
+
+    # Support end_page=-1 to read to last page
     if end_page == -1:
         end_page = total_pages
 
@@ -165,36 +163,34 @@ def screenshot_pdf_pages(
     start_page = max(1, start_page)
     end_page = min(total_pages, end_page)
 
-    pages_data = []
-    os.makedirs(PDF_DIR, exist_ok=True)
+    content_blocks = []
+
+    # Metadata block
+    content_blocks.append(
+        {"type": "text", "text": f"Rendering pages {start_page} to {end_page} of {path.name}"}
+    )
 
     for page_num in range(start_page - 1, end_page):
         page = doc[page_num]
-        
-        # Render the entire page (screenshot)
-        pix = page.get_pixmap(matrix=fitz.Matrix(dpi/72, dpi/72))
-        
-        # Generate unique filename
-        filename = f"{path.stem}_p{page_num+1}_{uuid.uuid4().hex[:6]}.png"
-        save_path = os.path.join(PDF_DIR, filename)
-        pix.save(save_path)
 
-        pages_data.append({
-            "page_number": page_num + 1,
-            "local_path": save_path,
-            "dpi": dpi,
-            "format": "png"
-        })
+        # Render page to bytes
+        pix = page.get_pixmap(matrix=fitz.Matrix(dpi/72, dpi/72))
+        img_bytes = pix.tobytes("png")
+
+        # Create the FastMCP Image wrapper
+        img_wrapper = Image(data=img_bytes, format="png")
+
+        # Convert to proper MCP ImageContent block
+        # This tells the Gemini CLI: "This is a visual part, not text."
+        content_blocks.append(img_wrapper.to_image_content())
+
+        # Reference label block
+        content_blocks.append(
+            {"type": "text", "text": f"--- Page {page_num+1} ---"}
+        )
 
     doc.close()
-
-    return {
-        "file": path.name,
-        "total_pages": total_pages,
-        "rendered_count": len(pages_data),
-        "pages": pages_data,
-        "note": "Full page screenshots saved. Use the local_path to read and analyze images."
-    }
+    return content_blocks
 
 
 def main():
