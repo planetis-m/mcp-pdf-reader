@@ -5,12 +5,13 @@ MCP PDF Server - Simple PDF text extraction, OCR, and image extraction.
 import uuid
 import logging
 import os
+import base64
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import fitz
 from fastmcp import FastMCP
-from fastmcp import Image
+from mcp.types import ImageContent
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('mcp-pdf-server')
@@ -177,12 +178,14 @@ def screenshot_pdf_pages(
         pix = page.get_pixmap(matrix=fitz.Matrix(dpi/72, dpi/72))
         img_bytes = pix.tobytes("png")
 
-        # Create the FastMCP Image wrapper
-        img_wrapper = Image(data=img_bytes, format="png")
-
-        # Convert to proper MCP ImageContent block
-        # This tells the Gemini CLI: "This is a visual part, not text."
-        content_blocks.append(img_wrapper.to_image_content())
+        # Create MCP ImageContent block directly
+        content_blocks.append(
+            ImageContent(
+                type="image",
+                data=base64.b64encode(img_bytes).decode("utf-8"),
+                mimeType="image/png"
+            )
+        )
 
         # Reference label block
         content_blocks.append(
