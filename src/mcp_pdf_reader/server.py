@@ -5,18 +5,18 @@ MCP PDF Server - Simple PDF text extraction, OCR, and image extraction.
 import uuid
 import logging
 import os
+import base64
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import fitz
 from fastmcp import FastMCP
+from fastmcp.utilities.logging import configure_logging, get_logger
 from mcp.types import ImageContent, TextContent
 
-logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger('mcp-pdf-server')
-
-# Silence FastMCP logging
-logging.getLogger('fastmcp').setLevel(logging.ERROR)
+# Configure FastMCP logging to ERROR only
+configure_logging(level='ERROR')
+logger = get_logger('mcp-pdf-server')
 
 mcp = FastMCP("PDF Reader")
 
